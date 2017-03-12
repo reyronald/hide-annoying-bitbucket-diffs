@@ -12,8 +12,12 @@
 (function() {
     'use strict';
 
-    var timer = setInterval(function() {
-        const diffBlocks = document.querySelectorAll('.commentable-diff');
+    let observer, watch, diffContainer;
+
+    const removeMatchingDiffs = () => {
+        observer.disconnect(); // Prevent callback from triggering itself.
+
+        const diffBlocks = document.querySelectorAll('.bb-udiff');
         const len = diffBlocks.length;
 
         const textSource = GM_getResourceText("ignorePatterns");
@@ -28,14 +32,33 @@
         if (len > 0) {
             for (let i = 0; i < len; ++i) {
                 const db = diffBlocks[i];
-                const filename = db.getAttribute('data-filename');
+                const filename = db.getAttribute('data-filename').trim();
 
                 if (patterns.some(re => re.test(filename))) {
                     db.remove();
-                    console.log('[HABD] Removed diff block for ', filename);
+                    console.log('[HABD] Removed ', filename);
                 }
             }
+        }
 
+        watch(); // Resume monitoring
+    };
+
+    observer = new MutationObserver(removeMatchingDiffs);
+
+    // Make sure diff container exists before monitoring it for changes.
+    const timer = setInterval(()=> {
+        diffContainer = document.querySelector('#changeset-diff');
+
+        if (diffContainer !== null) {
+            watch = observer.observe.bind(observer, document.querySelector('#changeset-diff'), {
+                childList: true,
+                attributes: false,
+                characterData: false
+            });
+
+            watch();
+            removeMatchingDiffs();
             clearInterval(timer);
         }
     }, 500);
