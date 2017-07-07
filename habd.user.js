@@ -42,6 +42,10 @@ package-lock.json
         if (filesChanged.length) {
             clearInterval(timer);
 
+            // TODO: Replace this setTimeout approach with some kind of DOM Observer
+            // NOTE TO SELF: When completed,test with the file 
+            // `/ProdoctivitySvc/ProdoctivityClientService9.xsd` in the PR
+            // https://bitbucket.org/novosit/prodoctivity/pull-requests/371?w=1
             setTimeout(function() {
                 filesToRemove.forEach(filename => {
                     const diffBlock = document.querySelector(`section[data-identifier="${filename}"]`);
