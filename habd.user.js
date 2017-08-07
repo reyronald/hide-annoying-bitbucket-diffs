@@ -8,8 +8,25 @@
 // @match        https://*.bitbucket.org/*/commits/*
 // ==/UserScript==
 
+function replaceFontFamily() {
+    const css = 'code { font-family: Consolas,Menlo,"Liberation Mono",Courier,monospace; }';
+    const head = document.head || document.getElementsByTagName('head')[0];
+    const style = document.createElement('style');
+
+    style.type = 'text/css';
+    if (style.styleSheet) {
+        style.styleSheet.cssText = css;
+    } else {
+        style.appendChild(document.createTextNode(css));
+    }
+
+    head.appendChild(style);
+}
+
 (function() {
     'use strict';
+
+    replaceFontFamily();
 
     const textSource = `
 .xsd$
@@ -35,11 +52,24 @@ package-lock.json
     const patterns = textSource.split(/\r?\n/).map((pattern) => new RegExp(pattern));
 
     const timer = setInterval(function() {
-        const filesChanged = [...document.querySelectorAll('#commit-files-summary > li')].map(li => li.getAttribute('data-file-identifier'));
+        const filesChanged = [...document.querySelectorAll('#commit-files-summary > li')].map(li => {
+            const filename = li.getAttribute('data-file-identifier');
+
+            if (patterns.some(re => re.test(filename))) {
+                const span = document.createElement('span');
+                span.style = "margin-left: 5px;";
+                span.innerText = filename;
+                li.querySelector('a').replaceWith(span);
+            }
+
+            return filename;
+        });
         const filesToRemove = filesChanged.filter(filename => patterns.some(re => re.test(filename)));
 
         if (filesChanged.length) {
             clearInterval(timer);
+
+            document.querySelector('#pullrequest-diff > section > h1').innerHTML += ` - Showing ${filesChanged.length - filesToRemove.length} of ${filesChanged.length}`;
 
             // TODO: Replace this setTimeout approach with some kind of DOM Observer
             // NOTE TO SELF: When completed,test with the file 
